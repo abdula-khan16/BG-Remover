@@ -1,0 +1,42 @@
+name: bg_remover_demo
+description: Simple demo to test on-device background removal with U2NETP ONNX model.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  image_picker: ^1.1.2
+  onnxruntime: ^1.4.1
+  image: ^4.2.0
+  path_provider: ^2.1.6
+  share_plus: ^13.2.1
+  permission_handler: ^12.0.3
+  google_sign_in: ^7.2.0
+  image_gallery_saver_plus: ^5.1.1
+  shared_preferences: ^2.3.2
+  extended_image: ^10.1.0
+  supabase_flutter: ^2.16.0
+  connectivity_plus:
+  crop_image: ^1.0.17
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
+
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter_18pt-Regular.ttf
+        - asset: assets/fonts/Inter_18pt-Medium.ttf
+        - asset: assets/fonts/Inter_18pt-Bold.ttf
+
+  assets:
+    - assets/models/u2netp.onnx
+    - assets/images/
