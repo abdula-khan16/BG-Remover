@@ -36,7 +36,7 @@ class AppColors {
 class AppStrings {
   // App Info
   static const String appName = 'BG Eraser';
-  static const String appTagline = 'Remove Background \n in Seconds';
+  static const String appTagline = 'Remove Background & Watermark in Seconds';
   static const String appSubtitle = 'AI-powered. 100% free. Works offline.';
   static const String version = '1.0.0';
 

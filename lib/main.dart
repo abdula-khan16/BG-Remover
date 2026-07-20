@@ -1,3 +1,4 @@
+import 'package:bg_remover_demo/screens/help_support_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -82,6 +83,7 @@ class MyApp extends StatelessWidget {
         '/signup': (context) => const SignUpScreen(),
         '/home': (context) => const MainScreen(),
         '/privacy_policy': (context) => const PrivacyPolicyScreen(),
+        '/help_support': (context) => const HelpSupportScreen(),
       },
     );
   }

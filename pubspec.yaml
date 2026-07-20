@@ -40,4 +40,5 @@ flutter:
 
   assets:
     - assets/models/u2netp.onnx
+    - assets/models/lama_fp32.onnx
     - assets/images/

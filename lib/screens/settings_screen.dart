@@ -53,7 +53,9 @@ class SettingsScreen extends StatelessWidget {
                 leading: const Icon(Icons.help, color: AppColors.primary),
                 title: const Text('Help & Support'),
                 trailing: const Icon(Icons.chevron_right),
-                onTap: () {},
+                onTap: () {
+                  Navigator.pushNamed(context, '/help_support');
+                },
               ),
               const Divider(),
               ListTile(

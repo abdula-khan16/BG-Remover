@@ -4,15 +4,21 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/background_remover_services.dart';
+import '../services/watermark_remover_service.dart';
+import '../models/operation_type.dart';
 import '../utils/image_storage_helper.dart';
 import 'result_screen.dart';
 
 class ProcessingScreen extends StatefulWidget {
   final String imagePath;
+  final OperationType operationType;
+  final File? maskFile;
 
   const ProcessingScreen({
     super.key,
     required this.imagePath,
+    required this.operationType,
+    this.maskFile,
   });
 
   @override
@@ -21,6 +27,7 @@ class ProcessingScreen extends StatefulWidget {
 
 class _ProcessingScreenState extends State<ProcessingScreen> {
   final BackgroundRemoverService _remover = BackgroundRemoverService();
+  final WatermarkRemoverService _watermarkRemover = WatermarkRemoverService();
   double _progress = 0.0;
   String _status = 'Loading AI Model...';
   bool _isProcessing = true;
@@ -82,12 +89,22 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
 
       await Future.delayed(const Duration(milliseconds: 500));
 
-      setState(() {
-        _progress = 0.5;
-        _status = 'Removing background...';
-      });
+      File resultFile;
 
-      final resultFile = await _remover.removeBackground(widget.imagePath);
+      if (widget.operationType == OperationType.removeBackground) {
+        setState(() {
+          _progress = 0.5;
+          _status = 'Removing background...';
+        });
+        resultFile = await _remover.removeBackground(widget.imagePath);
+      } else {
+        setState(() {
+          _progress = 0.5;
+          _status = 'Removing watermark...';
+        });
+        if (widget.maskFile == null) throw Exception("Mask file is required for watermark removal");
+        resultFile = await _watermarkRemover.removeWatermark(widget.imagePath, widget.maskFile!.path);
+      }
 
       setState(() {
         _progress = 0.8;

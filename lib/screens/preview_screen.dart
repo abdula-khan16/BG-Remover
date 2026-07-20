@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../utils/constants.dart';
 import '../viewmodels/preview_viewmodel.dart';
+import '../models/operation_type.dart';
 import 'processing_screen.dart';
+import 'mask_painter_screen.dart';
 
 class PreviewScreen extends StatefulWidget {
   final String imagePath;
@@ -20,6 +22,7 @@ class PreviewScreen extends StatefulWidget {
 
 class _PreviewScreenState extends State<PreviewScreen> {
   final PreviewViewModel _viewModel = Get.put(PreviewViewModel());
+  late final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
 
   @override
@@ -110,72 +113,117 @@ class _PreviewScreenState extends State<PreviewScreen> {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 16,
-                    color: Colors.black.withOpacity(0.9),
+                    color: isDarkMode ? AppColors.white : Colors.black,
                   ),
                 ),
               ),
 
               const SizedBox(height: 20),
 
-              // ========== PROCESS BUTTON ==========
+              // ========== PROCESS BUTTONS ==========
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: controller.isSaving
-                        ? null
-                        : () async {
-                            final editedPath = await controller.processImage(
-                              onErrorMessage: (msg) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text(msg)),
+                child: Column(
+                  children: [
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: controller.isSaving
+                            ? null
+                            : () async {
+                                final editedPath = await controller.processImage(
+                                  onErrorMessage: (msg) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text(msg)),
+                                    );
+                                  },
                                 );
+                                if (editedPath != null && mounted) {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => ProcessingScreen(
+                                        imagePath: editedPath,
+                                        operationType: OperationType.removeBackground,
+                                      ),
+                                    ),
+                                  );
+                                }
                               },
-                            );
-                            if (editedPath != null && mounted) {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => ProcessingScreen(
-                                    imagePath: editedPath,
-                                  ),
-                                ),
-                              );
-                            }
-                          },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: controller.isSaving
+                            ? const SizedBox(
+                                height: 22,
+                                width: 22,
+                                child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white),
+                              )
+                            : const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.auto_fix_high),
+                                  SizedBox(width: 12),
+                                  Text('Remove Background', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                ],
+                              ),
                       ),
                     ),
-                    child: controller.isSaving
-                        ? const SizedBox(
-                            height: 22,
-                            width: 22,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.4,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.auto_fix_high),
-                              SizedBox(width: 12),
-                              Text(
-                                'Process',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: controller.isSaving
+                            ? null
+                            : () async {
+                                final editedPath = await controller.processImage(
+                                  onErrorMessage: (msg) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text(msg)),
+                                    );
+                                  },
+                                );
+                                if (editedPath != null && mounted) {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => MaskPainterScreen(
+                                        imagePath: editedPath,
+                                      ),
+                                    ),
+                                  );
+                                }
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blueAccent,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                  ),
+                        ),
+                        child: controller.isSaving
+                            ? const SizedBox(
+                                height: 22,
+                                width: 22,
+                                child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white),
+                              )
+                            : const Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.water_drop),
+                                  SizedBox(width: 12),
+                                  Text('Remove Watermark', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                ],
+                              ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
 
@@ -190,13 +238,13 @@ class _PreviewScreenState extends State<PreviewScreen> {
                     onPressed: controller.isSaving ? null : () => Navigator.pop(context),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.white,
-                      side: const BorderSide(color: Colors.white),
+                      side: BorderSide(color: isDarkMode ? AppColors.white : Colors.black),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text('Cancel'),
+                    child: const Text('Cancel', style: TextStyle(color: Colors.redAccent),),
                   ),
                 ),
               ),
