@@ -32,20 +32,19 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
     _processImage();
   }
 
-  // ========== AUTO SYNC LOGIC ==========
-  Future<void> _autoSyncToCloud(File file) async {
+  // ========== AUTO SYIC LOGIC ==========
+  Future<void> _autoSyncToCloud(File file, String localPath) async {
     try {
       final supabase = Supabase.instance.client;
       final session = supabase.auth.currentSession;
       
-      // Check if user is logged in (not guest)
       final prefs = await SharedPreferences.getInstance();
       final bool isGuest = prefs.getBool('isGuest') ?? false;
 
       if (session != null && !isGuest) {
-        // Check internet connectivity
-        final connectivityResult = await Connectivity().checkConnectivity();
-        if (connectivityResult != ConnectivityResult.none) {
+        // Connectivity 6.x returns List<ConnectivityResult>
+        final List<ConnectivityResult> connectivityResult = await Connectivity().checkConnectivity();
+        if (connectivityResult.isNotEmpty && !connectivityResult.contains(ConnectivityResult.none)) {
           final fileName = file.path.split('/').last;
           final userId = session.user.id;
           
@@ -56,19 +55,19 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
             file,
             fileOptions: const FileOptions(upsert: true),
           );
-          debugPrint('✅ Auto-synced to Supabase');
+          
+          // ✅ MARK AS SYNCED
+          await ImageStorageHelper.markAsSynced(localPath);
+          debugPrint('✅ Auto-synced and marked in storage');
         }
       }
     } catch (e) {
       debugPrint('❌ Auto-sync failed: $e');
-      // We don't block the user if sync fails, just continue to result screen
     }
   }
 
-  // ========== PROCESS IMAGE ==========
   Future<void> _processImage() async {
     try {
-      // Step 1: Load Model (0-30%)
       setState(() {
         _progress = 0.1;
         _status = 'Loading AI Model...';
@@ -83,7 +82,6 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
 
       await Future.delayed(const Duration(milliseconds: 500));
 
-      // Step 2: Process Image (30-80%)
       setState(() {
         _progress = 0.5;
         _status = 'Removing background...';
@@ -96,13 +94,12 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
         _status = 'Saving locally...';
       });
 
-      // ✅ SAVE TO PERMANENT LOCAL STORAGE
       final bytes = await resultFile.readAsBytes();
       final permanentPath = await ImageStorageHelper.saveImage(bytes);
       final permanentFile = File(permanentPath);
 
-      // ✅ ATTEMPT AUTO-SYNC IF LOGGED IN & ONLINE
-      await _autoSyncToCloud(permanentFile);
+      // ✅ TRY AUTO-SYNC
+      await _autoSyncToCloud(permanentFile, permanentPath);
 
       setState(() {
         _progress = 1.0;
@@ -110,7 +107,6 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
         _isProcessing = false;
       });
 
-      // ✅ Navigate to Result Screen
       await Future.delayed(const Duration(milliseconds: 500));
 
       if (mounted) {
@@ -159,7 +155,6 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // ========== PROGRESS ==========
               Stack(
                 alignment: Alignment.center,
                 children: [
@@ -175,28 +170,13 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
                       ),
                     ),
                   ),
-                  Column(
-                    children: [
-                      Text(
-                        '${(_progress * 100).toInt()}%',
-                        style: const TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                      if (_progress < 1.0)
-                        const SizedBox(height: 4),
-                      if (_progress < 1.0)
-                        Text(
-                          _status,
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: Colors.white.withOpacity(0.8),
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                    ],
+                  Text(
+                    '${(_progress * 100).toInt()}%',
+                    style: const TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
                 ],
               ),
@@ -217,7 +197,7 @@ class _ProcessingScreenState extends State<ProcessingScreen> {
               const SizedBox(height: 12),
 
               Text(
-                'This happens on your device.\nPrivacy first.',
+                'AI is working on your device...',
                 style: TextStyle(
                   fontSize: 14,
                   color: Colors.white.withOpacity(0.7),

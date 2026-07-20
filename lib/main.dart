@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'screens/splash_screen.dart';
 import 'screens/main_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/sign_up_screen.dart';
 import 'screens/onboarding_screen.dart';
+import 'screens/privacy_policy_screen.dart';
 import 'utils/constants.dart';
 
 Future<void> main() async {
@@ -22,7 +24,7 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return GetMaterialApp(
       title: 'BG Eraser',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
@@ -31,11 +33,10 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(
           seedColor: AppColors.primary,
           primary: AppColors.primary,
+          brightness: Brightness.light,
         ),
         useMaterial3: true,
         appBarTheme: const AppBarTheme(
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
           elevation: 0,
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
@@ -47,7 +48,32 @@ class MyApp extends StatelessWidget {
             ),
           ),
         ),
+        scaffoldBackgroundColor: AppColors.white,
       ),
+      darkTheme: ThemeData(
+        fontFamily: 'Inter',
+        primaryColor: AppColors.primaryDark,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: AppColors.primaryDark,
+          primary: AppColors.primaryDark,
+          brightness: Brightness.dark,
+        ),
+        useMaterial3: true,
+        appBarTheme: const AppBarTheme(
+          elevation: 0,
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primaryDark,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+        scaffoldBackgroundColor: const Color(0xFF0F172A),
+      ),
+      themeMode: ThemeMode.light,
       initialRoute: '/',
       routes: {
         '/': (context) => const SplashScreen(),
@@ -55,7 +81,10 @@ class MyApp extends StatelessWidget {
         '/login': (context) => const LoginScreen(),
         '/signup': (context) => const SignUpScreen(),
         '/home': (context) => const MainScreen(),
+        '/privacy_policy': (context) => const PrivacyPolicyScreen(),
       },
     );
   }
 }
+
+

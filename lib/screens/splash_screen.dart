@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:get/get.dart';
 import '../utils/constants.dart';
+import '../viewmodels/splash_viewmodel.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -11,6 +11,8 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
+  final SplashViewModel _viewModel = Get.put(SplashViewModel());
+
   @override
   void initState() {
     super.initState();
@@ -18,32 +20,12 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _initializeApp() async {
-    // 1. Splash delay (animation/branding)
-    await Future.delayed(const Duration(seconds: 2));
-
-    if (!mounted) return;
-
-    // 2. Check if it's the user's first time ever
-    final prefs = await SharedPreferences.getInstance();
-    final bool showOnboarding = prefs.getBool('showOnboarding') ?? true;
-
-    if (showOnboarding) {
-      // First time -> Onboarding
-      Navigator.pushReplacementNamed(context, '/onboarding');
-      return;
-    }
-
-    // 3. Check if user is already authenticated
-    final session = Supabase.instance.client.auth.currentSession;
-
-    if (session != null) {
-      // Already logged in -> Home
-      Navigator.pushReplacementNamed(context, '/home');
-    } else {
-      // Returning but not logged in -> Login
-      Navigator.pushReplacementNamed(context, '/login');
+    final route = await _viewModel.initializeApp();
+    if (mounted) {
+      Navigator.pushReplacementNamed(context, route);
     }
   }
+
 
   @override
   Widget build(BuildContext context) {

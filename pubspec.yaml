@@ -15,13 +15,14 @@ dependencies:
   path_provider: ^2.1.6
   share_plus: ^13.2.1
   permission_handler: ^12.0.3
-  google_sign_in: ^7.2.0
   image_gallery_saver_plus: ^5.1.1
   shared_preferences: ^2.3.2
-  extended_image: ^10.1.0
+  extended_image:
   supabase_flutter: ^2.16.0
-  connectivity_plus:
+  connectivity_plus: ^6.1.0
   crop_image: ^1.0.17
+  get: ^4.6.6
+  google_sign_in: ^7.2.0
 
 dev_dependencies:
   flutter_test:

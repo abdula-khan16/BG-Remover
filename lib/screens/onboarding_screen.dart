@@ -1,20 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:get/get.dart';
 import '../utils/constants.dart';
+import '../viewmodels/onboarding_viewmodel.dart';
 
 class OnboardingScreen extends StatelessWidget {
   const OnboardingScreen({super.key});
 
-  Future<void> _completeOnboarding(BuildContext context) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('showOnboarding', false);
-    if (context.mounted) {
-      Navigator.pushReplacementNamed(context, '/login');
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
+    final viewModel = Get.put(OnboardingViewModel());
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -41,7 +35,13 @@ class OnboardingScreen extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () => _completeOnboarding(context),
+                  onPressed: () async {
+                    final route = await viewModel.completeOnboarding();
+                    if (context.mounted) {
+                      Navigator.pushReplacementNamed(context, route);
+                    }
+                  },
+
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

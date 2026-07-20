@@ -1,12 +1,12 @@
 import 'dart:io';
-import 'package:bg_remover_demo/screens/profile_screen.dart';
+import 'package:bg_remover_demo/screens/settings_screen.dart';
 import 'package:bg_remover_demo/screens/recents_edits_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:get/get.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../utils/constants.dart';
-import '../utils/image_storage_helper.dart';
+import '../viewmodels/home_viewmodel.dart';
 import 'preview_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -17,113 +17,12 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  bool _isLoading = false;
-  List<String> _recentPaths = [];
+  final HomeViewModel _viewModel = Get.put(HomeViewModel());
 
   @override
   void initState() {
     super.initState();
-    _loadRecentImages();
-  }
-
-  Future<void> _loadRecentImages() async {
-    final paths = await ImageStorageHelper.getSavedImages();
-    if (mounted) {
-      setState(() {
-        _recentPaths = paths;
-      });
-    }
-    _syncCloudEditsInBackground();
-  }
-
-  Future<void> _syncCloudEditsInBackground() async {
-    await ImageStorageHelper.syncCloudEdits();
-    final paths = await ImageStorageHelper.getSavedImages();
-    if (mounted) {
-      setState(() {
-        _recentPaths = paths;
-      });
-    }
-  }
-
-  // ========== TAKE PHOTO ==========
-  Future<void> _takePhoto() async {
-    try {
-      final picker = ImagePicker();
-      final status = await Permission.camera.status;
-
-      if (!status.isGranted) {
-        final requested = await Permission.camera.request();
-
-        if (!requested.isGranted) {
-          _showPermissionDialog(
-            'Camera Permission Required',
-            'BG Eraser needs camera access to take photos for background removal. Please grant permission in settings.',
-          );
-          return;
-        }
-      }
-
-      setState(() => _isLoading = true);
-
-      final XFile? photo = await picker.pickImage(
-        source: ImageSource.camera,
-        maxWidth: 1920,
-        maxHeight: 1920,
-        imageQuality: 90,
-      );
-
-      if (photo != null) {
-        if (!mounted) return;
-        await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => PreviewScreen(
-              imagePath: photo.path,
-            ),
-          ),
-        );
-        // Refresh recents if we returned from a process
-        _loadRecentImages();
-      }
-    } catch (e) {
-      _showSnackBar('Camera error: $e', Colors.red);
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  // ========== PICK FROM GALLERY ==========
-  Future<void> _pickFromGallery() async {
-    setState(() => _isLoading = true);
-
-    try {
-      final picker = ImagePicker();
-      final XFile? image = await picker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 1920,
-        maxHeight: 1920,
-        imageQuality: 90,
-      );
-
-      if (image != null) {
-        if (!mounted) return;
-        await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => PreviewScreen(
-              imagePath: image.path,
-            ),
-          ),
-        );
-        // Refresh recents if we returned from a process
-        _loadRecentImages();
-      }
-    } catch (e) {
-      _showSnackBar('Gallery error: $e', Colors.red);
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
+    _viewModel.loadRecentImages();
   }
 
   void _showPermissionDialog(String title, String message) {
@@ -162,339 +61,233 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    
     return Scaffold(
       appBar: AppBar(
         toolbarHeight: 0,
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         systemOverlayStyle: SystemUiOverlayStyle(
           statusBarColor: AppColors.primary,
           statusBarIconBrightness: Brightness.light,
         ),
       ),
-      backgroundColor: AppColors.white,
       body: SafeArea(
-        child: _isLoading
-            ? const Center(
-                child: CircularProgressIndicator(color: AppColors.primary),
-              )
-            : RefreshIndicator(
-                onRefresh: _loadRecentImages,
-                child: SingleChildScrollView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  child: Column(
-                    children: [
-                      // ========== HEADER ==========
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-                        decoration: const BoxDecoration(
-                          borderRadius: BorderRadius.only(
-                            bottomLeft: Radius.circular(25),
-                            bottomRight: Radius.circular(25),
-                          ),
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              AppColors.primary,
-                              AppColors.primaryDark,
-                            ],
-                          ),
+        child: GetBuilder<HomeViewModel>(
+          builder: (controller) {
+            return RefreshIndicator(
+              onRefresh: controller.loadRecentImages,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Column(
+                  children: [
+                    // ========== HEADER ==========
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                      decoration: const BoxDecoration(
+                        borderRadius: BorderRadius.only(
+                          bottomLeft: Radius.circular(25),
+                          bottomRight: Radius.circular(25),
                         ),
-                        child: Column(
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(10),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.white.withOpacity(0.3),
-                                        borderRadius: const BorderRadius.all(
-                                          Radius.circular(15),
-                                        ),
-                                      ),
-                                      child: const Icon(Icons.auto_awesome, size: 24, color: AppColors.white),
-                                    ),
-                                    const SizedBox(width: 10),
-                                    const Text(
-                                      AppStrings.appName,
-                                      style: TextStyle(
-                                        color: AppColors.white,
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                // ========== PROFILE ICON ==========
-                                GestureDetector(
-                                  onTap: () async {
-                                    await Navigator.push(
-                                      context,
-                                      MaterialPageRoute(builder: (context) => const ProfileScreen()),
-                                    );
-                                    _loadRecentImages();
-                                  },
-                                  child: Container(
-                                    padding: const EdgeInsets.all(10),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.white.withOpacity(0.3),
-                                      borderRadius: const BorderRadius.all(
-                                        Radius.circular(15),
-                                      ),
-                                    ),
-                                    child: const Icon(Icons.person, size: 24, color: AppColors.white),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 15),
-                            const Text(
-                              AppStrings.appTagline,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 24,
-                                color: AppColors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              AppStrings.appSubtitle,
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: AppColors.white.withOpacity(0.8),
-                              ),
-                            ),
-                            const SizedBox(height: 20),
-                            // ========== BUTTONS ==========
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Expanded(
-                                  child: ElevatedButton.icon(
-                                    onPressed: _takePhoto,
-                                    icon: const Icon(Icons.camera_alt, size: 20),
-                                    label: const Text('Camera'),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppColors.white,
-                                      foregroundColor: AppColors.primary,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: ElevatedButton.icon(
-                                    onPressed: _pickFromGallery,
-                                    icon: const Icon(Icons.photo_library, size: 20),
-                                    label: const Text('Pick Image'),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppColors.white,
-                                      foregroundColor: AppColors.primaryDark,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 10),
-                            Text(
-                              AppStrings.uploadHint,
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.white.withOpacity(0.6),
-                              ),
-                            ),
-                          ],
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [AppColors.primary, AppColors.primaryDark],
                         ),
                       ),
-
-                      const SizedBox(height: 20),
-
-                      // ========== FEATURES ==========
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      child: Column(
                         children: [
-                          _buildFeatureCard(
-                            icon: Icons.flash_on,
-                            label: AppStrings.featureFast,
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: const Icon(Icons.auto_awesome, color: Colors.white),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  const Text(
+                                    AppStrings.appName,
+                                    style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.settings, color: Colors.white),
+                                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const SettingsScreen())),
+                              ),
+                            ],
                           ),
-                          _buildFeatureCard(
-                            icon: Icons.lock,
-                            label: AppStrings.featurePrivate,
+                          const SizedBox(height: 20),
+                          const Text(
+                            AppStrings.appTagline,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 24, color: Colors.white, fontWeight: FontWeight.bold),
                           ),
-                          _buildFeatureCard(
-                            icon: Icons.color_lens,
-                            label: AppStrings.featureEdit,
+                          const SizedBox(height: 10),
+                          Text(
+                            AppStrings.appSubtitle,
+                            style: TextStyle(color: Colors.white.withOpacity(0.8)),
+                          ),
+                          const SizedBox(height: 25),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildActionButton(
+                                  icon: Icons.camera_alt,
+                                  label: 'Camera',
+                                  onTap: () async {
+                                    final path = await controller.takePhoto(
+                                      onPermissionRequired: _showPermissionDialog,
+                                      onMessage: _showSnackBar,
+                                    );
+                                    if (path != null && mounted) {
+                                      await Navigator.push(context, MaterialPageRoute(builder: (context) => PreviewScreen(imagePath: path)));
+                                      controller.loadRecentImages();
+                                    }
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _buildActionButton(
+                                  icon: Icons.photo_library,
+                                  label: 'Gallery',
+                                  onTap: () async {
+                                    final path = await controller.pickFromGallery(onMessage: _showSnackBar);
+                                    if (path != null && mounted) {
+                                      await Navigator.push(context, MaterialPageRoute(builder: (context) => PreviewScreen(imagePath: path)));
+                                      controller.loadRecentImages();
+                                    }
+                                  },
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
+                    ),
 
-                      // ========== Recents ==========
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                const Text(
-                                  AppStrings.recentEdits,
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
+                    const SizedBox(height: 24),
+
+                    // ========== FEATURES SESSION ==========
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _buildFeatureCard(Icons.bolt, 'Fast', isDarkMode),
+                          _buildFeatureCard(Icons.security, 'Secure', isDarkMode),
+                          _buildFeatureCard(Icons.hd, 'HD Quality', isDarkMode),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // ========== RECENTS ==========
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('Recent Edits', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                              TextButton(
+                                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const RecentsEditsScreen())),
+                                child: const Text('View All'),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          controller.isLoading 
+                            ? const Center(child: CircularProgressIndicator())
+                            : controller.recentPaths.isEmpty 
+                              ? _buildEmptyState()
+                              : GridView.builder(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  itemCount: controller.recentPaths.length > 4 ? 4 : controller.recentPaths.length,
+                                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: 2,
+                                    crossAxisSpacing: 12,
+                                    mainAxisSpacing: 12,
+                                    childAspectRatio: 1,
                                   ),
+                                  itemBuilder: (context, index) => _buildRecentCard(controller.recentPaths[index]),
                                 ),
-                                const Spacer(),
-                                TextButton(
-                                  onPressed: () async {
-                                    await Navigator.push(
-                                      context,
-                                      MaterialPageRoute(builder: (context) => const RecentsEditsScreen()),
-                                    );
-                                    _loadRecentImages();
-                                  },
-                                  child: const Text(
-                                    AppStrings.viewAll,
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: AppColors.primary,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 10),
-                            _recentPaths.isEmpty
-                                ? _buildEmptyRecents()
-                                : GridView.builder(
-                                    shrinkWrap: true,
-                                    physics: const NeverScrollableScrollPhysics(),
-                                    itemCount: _recentPaths.length > 4 ? 4 : _recentPaths.length,
-                                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                                      crossAxisCount: 4,
-                                      crossAxisSpacing: 10,
-                                      mainAxisSpacing: 10,
-                                      childAspectRatio: 1,
-                                    ),
-                                    itemBuilder: (context, index) {
-                                      return _buildRecentImageCard(
-                                        filePath: _recentPaths[index],
-                                      );
-                                    },
-                                  ),
-                          ],
-                        ),
-                      )
-                    ],
-                  ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 30),
+                  ],
                 ),
               ),
+            );
+          },
+        ),
       ),
     );
   }
 
-  Widget _buildEmptyRecents() {
+  Widget _buildActionButton({required IconData icon, required String label, required VoidCallback onTap}) {
+    return ElevatedButton.icon(
+      onPressed: onTap,
+      icon: Icon(icon, size: 20),
+      label: Text(label),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.white,
+        foregroundColor: AppColors.primary,
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+  }
+
+  Widget _buildFeatureCard(IconData icon, String label, bool isDarkMode) {
+    return Container(
+      width: MediaQuery.of(context).size.width * 0.28,
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      decoration: BoxDecoration(
+        color: isDarkMode ? Colors.white : Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: AppColors.primary, size: 28),
+          const SizedBox(height: 8),
+          Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecentCard(String path) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: Image.file(File(path), fit: BoxFit.cover),
+    );
+  }
+
+  Widget _buildEmptyState() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColors.grayLight,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
+      padding: const EdgeInsets.all(40),
+      decoration: BoxDecoration(color: AppColors.grayLight, borderRadius: BorderRadius.circular(16)),
+      child: const Column(
         children: [
-          Icon(Icons.image_outlined, color: AppColors.gray.withOpacity(0.5), size: 40),
-          const SizedBox(height: 8),
-          const Text(
-            AppStrings.noHistory,
-            style: TextStyle(color: AppColors.gray, fontWeight: FontWeight.bold),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRecentImageCard({
-    required String filePath,
-  }) {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Stack(
-        children: [
-          GestureDetector(
-            onTap: () async {
-              await Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const RecentsEditsScreen()),
-              );
-              _loadRecentImages();
-            },
-            child: SizedBox.expand(
-              child: Image.file(
-                File(filePath),
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Container(
-                  color: AppColors.grayLight,
-                  child: const Icon(Icons.image_not_supported, color: AppColors.gray),
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: 4,
-            right: 4,
-            child: const CircleAvatar(
-              radius: 10,
-              backgroundColor: AppColors.primary,
-              child: Icon(
-                Icons.check,
-                color: Colors.white,
-                size: 10,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFeatureCard({
-    required IconData icon,
-    required String label,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            spreadRadius: 2,
-          ),
-        ],
-        color: Colors.white,
-        borderRadius: const BorderRadius.all(Radius.circular(12)),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: AppColors.primary),
-          const SizedBox(height: 6),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 14,
-              color: AppColors.primary,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          Icon(Icons.image_search, size: 48, color: AppColors.gray),
+          SizedBox(height: 12),
+          Text('No edits yet', style: TextStyle(color: AppColors.gray, fontWeight: FontWeight.bold)),
         ],
       ),
     );
